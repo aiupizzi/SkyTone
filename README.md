@@ -64,6 +64,18 @@ Unit tests for time conversions and API responses. UI tests implemented with Com
 - Coarse location
 - Internet access
 
+## Build Instructions
+1. Clone repository:
+```bash
+git clone https://github.com/aiupizzi/skytone.git
+```
+2. Open in Android Studio.
+3. Build and run.
+
+## Contributing
+
+Fork, branch, commit, and submit a pull request.
+
 ## Future Development
 
 - Push notifications system
@@ -73,4 +85,4 @@ Unit tests for time conversions and API responses. UI tests implemented with Com
 
 ## License
 
-MIT License
+[MIT License](https://github.com/aiupizzi/SkyTone/blob/master/LICENSE.md)
