@@ -1,3 +1,5 @@
+![SkyTone Logo](img/banner.jpg)
+
 # SkyTone
 
 SkyTone is an Android app that shows sunset and twilight times based on your location using Jetpack Compose and API integration.
