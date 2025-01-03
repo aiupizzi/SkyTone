@@ -1,0 +1,76 @@
+# Kotlin/Java-specific
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.hprof
+
+# Android/IntelliJ-specific
+.gradle/
+.idea/
+build/
+captures/
+.externalNativeBuild/
+local.properties
+
+# Gradle-specific
+.gradle
+/build
+*/build
+!.gradle
+gradle-app.setting
+.gradle/cache/
+.gradle/*taskHistory
+.gradle/*snapshots/
+.gradle/buildOutputCleanup/
+gradle-app.properties
+
+# Dependency caches
+**/gradle/**/wrapper/dists/**
+
+# Android-specific
+*.apk
+*.ap_
+*.dex
+*.aar
+*.keystore
+
+# ProGuard
+proguard/
+proguard.map
+proguard/*.pro
+
+# Log files
+*.log
+
+# Generated files
+*.xml
+*.json
+
+# Unit test and debugging
+.classpath
+.project
+*.metadata
+*.bak
+*.swp
+*.log
+.DS_Store
+.env
+tmp/
+
+# IDE-specific
+.vscode/
+.idea/
+*.idea/
+*.iml
+*.ipr
+*.iws
+
+# User files
+*.userprefs
+local.properties
+
+# OS-specific
+*.DS_Store
+Thumbs.db
