@@ -1,6 +1,6 @@
 # SkyTone
 
-Android application that provides sunset tracking using device location and astronomical calculations.
+SkyTone is an Android app that shows sunset and twilight times based on your location using Jetpack Compose and API integration.
 
 ## Architecture
 
