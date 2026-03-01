@@ -35,4 +35,36 @@ class MainActivityTimeFormatTest {
 
         assertEquals("Error converting time", result)
     }
+
+    @Test
+    fun convertUtcToLocalOrUnavailable_returnsUnavailableWhenNull() {
+        val result = convertUtcToLocalOrUnavailable(null, ZoneId.of("UTC"), Locale.US)
+
+        assertEquals("Unavailable", result)
+    }
+
+    @Test
+    fun convertUtcToLocalOrUnavailable_returnsUnavailableWhenBlank() {
+        val result = convertUtcToLocalOrUnavailable("   ", ZoneId.of("UTC"), Locale.US)
+
+        assertEquals("Unavailable", result)
+    }
+
+    @Test
+    fun convertUtcToLocalOrUnavailable_trimsInputAndConvertsToLocalTime() {
+        val result = convertUtcToLocalOrUnavailable(
+            utcTime = " 2024-07-10T18:30:00Z ",
+            zoneId = ZoneId.of("America/New_York"),
+            locale = Locale.US
+        )
+
+        assertEquals("02:30 PM", result)
+    }
+
+    @Test
+    fun convertUtcToLocalOrUnavailable_returnsErrorForInvalidUtcString() {
+        val result = convertUtcToLocalOrUnavailable("invalid", ZoneId.of("UTC"), Locale.US)
+
+        assertEquals("Error converting time", result)
+    }
 }

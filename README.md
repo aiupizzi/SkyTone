@@ -59,7 +59,13 @@ Implements Compose state management for:
 
 ## Testing
 
-Unit tests for time conversions and API responses. UI tests implemented with Compose testing framework.
+Current automated coverage focuses on JVM unit tests and a basic instrumentation sanity check:
+
+- `MainActivityTimeFormatTest` verifies UTC-to-local time formatting and error handling (`Unavailable` and invalid timestamp inputs).
+- `SunsetApiStatusMappingTest` verifies Sunrise-Sunset API status-to-message mapping used for user-facing error states.
+- `SkyToneAppContextInstrumentedTest` verifies the app launches under the expected application ID on device/emulator.
+
+There are currently no Compose UI interaction tests in this repository.
 
 ## Permissions
 - Fine location
