@@ -54,12 +54,30 @@ import java.util.Locale
 
 private const val SERVICE_UNAVAILABLE_STATUS = "UNKNOWN_ERROR"
 
+data class SunsetUiModel(
+    val sunsetTime: String,
+    val countdownLabel: String,
+    val twilightItems: List<TwilightItem>,
+    val todayDetailItems: List<TodayDetailItem>,
+    val weekItems: List<WeekItem>
+)
+
+data class TwilightItem(val label: String, val value: String)
+
+data class TodayDetailItem(val label: String, val value: String)
+
+data class WeekItem(val day: String, val condition: String, val temperatureRange: String)
+
+sealed interface SunsetUiState {
+    data object Loading : SunsetUiState
+
+    data class Success(val model: SunsetUiModel) : SunsetUiState
+
+    data class Error(val message: String) : SunsetUiState
+}
+
 private sealed interface SunsetFetchResult {
-    data class Success(
-        val sunsetStartLocal: String,
-        val sunsetEndLocal: String,
-        val twilightEndLocal: String
-    ) : SunsetFetchResult
+    data class Success(val model: SunsetUiModel) : SunsetFetchResult
 
     data class DomainError(val message: String) : SunsetFetchResult
 
@@ -69,7 +87,7 @@ private sealed interface SunsetFetchResult {
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationState = mutableStateOf("Fetching location...")
-    private var sunsetState = mutableStateOf("Fetching sunset data...")
+    private var sunsetState = mutableStateOf<SunsetUiState>(SunsetUiState.Loading)
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
@@ -99,7 +117,7 @@ class MainActivity : ComponentActivity() {
             SkyToneTheme {
                 WelcomeScreen(
                     location = locationState.value,
-                    sunsetInfo = sunsetState.value,
+                    sunsetState = sunsetState.value,
                     onRefreshClick = { fetchLocation() }
                 )
             }
@@ -150,23 +168,19 @@ class MainActivity : ComponentActivity() {
 
     private fun fetchSunsetData(latitude: Double, longitude: Double) {
         lifecycleScope.launch {
-            sunsetState.value = "Fetching sunset data..."
+            sunsetState.value = SunsetUiState.Loading
 
             when (val result = fetchAndMapSunsetData(latitude, longitude)) {
                 is SunsetFetchResult.Success -> {
-                    sunsetState.value = """
-                        Sunset Starts: ${result.sunsetStartLocal}
-                        Sunset Ends: ${result.sunsetEndLocal}
-                        Twilight Ends: ${result.twilightEndLocal}
-                    """.trimIndent()
+                    sunsetState.value = SunsetUiState.Success(result.model)
                 }
 
                 is SunsetFetchResult.DomainError -> {
-                    sunsetState.value = result.message
+                    sunsetState.value = SunsetUiState.Error(result.message)
                 }
 
                 is SunsetFetchResult.NetworkError -> {
-                    sunsetState.value = result.message
+                    sunsetState.value = SunsetUiState.Error(result.message)
                 }
             }
         }
@@ -194,10 +208,22 @@ class MainActivity : ComponentActivity() {
             val sunsetEndLocal = convertUtcToLocal(results.sunset)
             val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
 
+            val twilightItems = listOf(
+                TwilightItem(label = "Civil start", value = sunsetStartLocal),
+                TwilightItem(label = "Sunset", value = sunsetEndLocal),
+                TwilightItem(label = "Civil end", value = twilightEndLocal)
+            )
+
+            val model = SunsetUiModel(
+                sunsetTime = sunsetEndLocal,
+                countdownLabel = calculateCountdownLabel(sunsetEndLocal),
+                twilightItems = twilightItems,
+                todayDetailItems = buildTodayDetailItems(sunsetStartLocal, sunsetEndLocal, twilightEndLocal),
+                weekItems = buildWeekItems()
+            )
+
             SunsetFetchResult.Success(
-                sunsetStartLocal = sunsetStartLocal,
-                sunsetEndLocal = sunsetEndLocal,
-                twilightEndLocal = twilightEndLocal
+                model = model
             )
         } catch (e: Exception) {
             SunsetFetchResult.NetworkError(
@@ -244,7 +270,7 @@ internal fun formatUtcToLocalTime(
         val localDateTime = OffsetDateTime.parse(utcTime)
             .atZoneSameInstant(zoneId)
 
-        val formatter = DateTimeFormatter.ofPattern("hh:mm a", locale)
+        val formatter = DateTimeFormatter.ofPattern("h:mm a", locale)
         localDateTime.format(formatter)
     } catch (e: Exception) {
         "Error converting time"
@@ -254,7 +280,7 @@ internal fun formatUtcToLocalTime(
 @Composable
 fun WelcomeScreen(
     location: String,
-    sunsetInfo: String,
+    sunsetState: SunsetUiState,
     onRefreshClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -295,31 +321,22 @@ fun WelcomeScreen(
                         date = "Today"
                     )
                 }
-                item { SunsetHeroCard(sunsetInfo = sunsetInfo, onRefreshClick = onRefreshClick) }
-                item {
-                    TwilightSummaryRow(
-                        civil = "6:31 PM",
-                        nautical = "7:04 PM",
-                        astronomical = "7:36 PM"
-                    )
-                }
-                item {
-                    TodayDetailsRow(
-                        humidity = "62%",
-                        wind = "11 km/h",
-                        cloudCover = "18%"
-                    )
-                }
-                item {
-                    WeekForecastSection(
-                        forecastItems = listOf(
-                            ForecastItem("Mon", "Clear", "22° / 13°"),
-                            ForecastItem("Tue", "Sunny", "24° / 14°"),
-                            ForecastItem("Wed", "Partly Cloudy", "21° / 12°"),
-                            ForecastItem("Thu", "Cloudy", "20° / 11°"),
-                            ForecastItem("Fri", "Light Rain", "18° / 10°")
-                        )
-                    )
+                item { SunsetHeroCard(sunsetState = sunsetState, onRefreshClick = onRefreshClick) }
+
+                when (sunsetState) {
+                    SunsetUiState.Loading -> {
+                        item { SunsetLoadingBlock() }
+                    }
+
+                    is SunsetUiState.Error -> {
+                        item { SunsetErrorBlock(message = sunsetState.message) }
+                    }
+
+                    is SunsetUiState.Success -> {
+                        item { TwilightSummaryRow(items = sunsetState.model.twilightItems) }
+                        item { TodayDetailsRow(items = sunsetState.model.todayDetailItems) }
+                        item { WeekForecastSection(weekItems = sunsetState.model.weekItems) }
+                    }
                 }
             }
         }
@@ -348,9 +365,13 @@ fun TopHeaderSection(currentTime: String, location: String, date: String) {
 }
 
 @Composable
-fun SunsetHeroCard(sunsetInfo: String, onRefreshClick: () -> Unit) {
-    val sunsetTime = remember(sunsetInfo) { extractSunsetEndTime(sunsetInfo) }
-    val countdownLabel = remember(sunsetTime) { calculateCountdownLabel(sunsetTime) }
+fun SunsetHeroCard(sunsetState: SunsetUiState, onRefreshClick: () -> Unit) {
+    val sunsetTime = (sunsetState as? SunsetUiState.Success)?.model?.sunsetTime ?: "--"
+    val countdownLabel = when (sunsetState) {
+        SunsetUiState.Loading -> "Getting latest sunset window..."
+        is SunsetUiState.Error -> "Unable to compute countdown"
+        is SunsetUiState.Success -> sunsetState.model.countdownLabel
+    }
 
     GlassCard(
         modifier = Modifier
@@ -440,39 +461,28 @@ fun GlassCard(
     }
 }
 
-private fun extractSunsetEndTime(sunsetInfo: String): String {
-    val sunsetLine = sunsetInfo
-        .lineSequence()
-        .firstOrNull { it.startsWith("Sunset Ends:", ignoreCase = true) }
-    return sunsetLine?.substringAfter(':')?.trim()?.takeIf { it.isNotBlank() } ?: "Unavailable"
-}
-
 private fun calculateCountdownLabel(sunsetTime: String): String {
-    if (sunsetTime == "Unavailable") return "Countdown unavailable"
+    if (sunsetTime == "Unavailable") return "Happening time unavailable"
 
     return try {
-        val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
+        val formatter = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
         val targetTime = LocalTime.parse(sunsetTime, formatter)
         val now = LocalTime.now()
         val minutes = Duration.between(now, targetTime).toMinutes()
 
         when {
-            minutes > 0 -> {
-                val hoursPart = minutes / 60
-                val minutePart = minutes % 60
-                "Sunset in ${hoursPart}h ${minutePart}m"
-            }
-
-            minutes == 0L -> "Sunset is happening now"
-            else -> "Sunset has passed"
+            minutes > 60 -> "Happening in ${minutes / 60} hr ${minutes % 60} mins"
+            minutes > 0 -> "Happening in $minutes mins"
+            minutes == 0L -> "Happening now"
+            else -> "Happened ${kotlin.math.abs(minutes)} mins ago"
         }
     } catch (e: Exception) {
-        "Countdown unavailable"
+        "Happening time unavailable"
     }
 }
 
 @Composable
-fun TwilightSummaryRow(civil: String, nautical: String, astronomical: String) {
+fun TwilightSummaryRow(items: List<TwilightItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -480,15 +490,15 @@ fun TwilightSummaryRow(civil: String, nautical: String, astronomical: String) {
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            SummaryItem(label = "Civil", value = civil)
-            SummaryItem(label = "Nautical", value = nautical)
-            SummaryItem(label = "Astronomical", value = astronomical)
+            items.forEach { item ->
+                TwilightStatCard(item = item)
+            }
         }
     }
 }
 
 @Composable
-fun TodayDetailsRow(humidity: String, wind: String, cloudCover: String) {
+fun TodayDetailsRow(items: List<TodayDetailItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -496,51 +506,105 @@ fun TodayDetailsRow(humidity: String, wind: String, cloudCover: String) {
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            SummaryItem(label = "Humidity", value = humidity)
-            SummaryItem(label = "Wind", value = wind)
-            SummaryItem(label = "Clouds", value = cloudCover)
+            items.forEach { item ->
+                DetailPill(item = item)
+            }
         }
     }
 }
 
 @Composable
-fun SummaryItem(label: String, value: String) {
+fun TwilightStatCard(item: TwilightItem) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium)
-        Text(text = value, style = MaterialTheme.typography.titleSmall)
+        Text(text = item.label, style = MaterialTheme.typography.labelMedium)
+        Text(text = item.value, style = MaterialTheme.typography.titleSmall)
     }
 }
 
-data class ForecastItem(val day: String, val condition: String, val temperatureRange: String)
+@Composable
+fun DetailPill(item: TodayDetailItem) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = item.label, style = MaterialTheme.typography.labelMedium)
+        Text(text = item.value, style = MaterialTheme.typography.titleSmall)
+    }
+}
 
 @Composable
-fun WeekForecastSection(forecastItems: List<ForecastItem>) {
+fun WeekForecastSection(weekItems: List<WeekItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(text = "Week Forecast", style = MaterialTheme.typography.titleMedium)
-            forecastItems.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = item.day, style = MaterialTheme.typography.bodyLarge)
-                    Text(text = item.condition, style = MaterialTheme.typography.bodyMedium)
-                    Text(text = item.temperatureRange, style = MaterialTheme.typography.titleSmall)
-                }
+            weekItems.forEach { item ->
+                WeekDayCard(item = item)
             }
         }
     }
+}
+
+@Composable
+fun WeekDayCard(item: WeekItem) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = item.day, style = MaterialTheme.typography.bodyLarge)
+        Text(text = item.condition, style = MaterialTheme.typography.bodyMedium)
+        Text(text = item.temperatureRange, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+@Composable
+fun SunsetLoadingBlock() {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Loading sunset details...",
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Composable
+fun SunsetErrorBlock(message: String) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+private fun buildTodayDetailItems(
+    sunsetStartLocal: String,
+    sunsetEndLocal: String,
+    twilightEndLocal: String
+): List<TodayDetailItem> {
+    return listOf(
+        TodayDetailItem(label = "Start", value = sunsetStartLocal),
+        TodayDetailItem(label = "Peak", value = sunsetEndLocal),
+        TodayDetailItem(label = "End", value = twilightEndLocal)
+    )
+}
+
+private fun buildWeekItems(): List<WeekItem> {
+    return listOf(
+        WeekItem("Mon", "Clear", "22° / 13°"),
+        WeekItem("Tue", "Sunny", "24° / 14°"),
+        WeekItem("Wed", "Partly Cloudy", "21° / 12°"),
+        WeekItem("Thu", "Cloudy", "20° / 11°"),
+        WeekItem("Fri", "Light Rain", "18° / 10°")
+    )
 }
 
 @Composable
@@ -573,7 +637,23 @@ fun WelcomeScreenPreview() {
     SkyToneTheme {
         WelcomeScreen(
             location = "Lat: 50.8092356, Lng: 4.9370557",
-            sunsetInfo = "Sunset Starts: 5:18 PM\nSunset Ends: 5:48 PM\nTwilight Ends: 6:25 PM",
+            sunsetState = SunsetUiState.Success(
+                SunsetUiModel(
+                    sunsetTime = "5:48 PM",
+                    countdownLabel = "Happening in 54 mins",
+                    twilightItems = listOf(
+                        TwilightItem("Civil start", "5:18 PM"),
+                        TwilightItem("Sunset", "5:48 PM"),
+                        TwilightItem("Civil end", "6:25 PM")
+                    ),
+                    todayDetailItems = listOf(
+                        TodayDetailItem("Start", "5:18 PM"),
+                        TodayDetailItem("Peak", "5:48 PM"),
+                        TodayDetailItem("End", "6:25 PM")
+                    ),
+                    weekItems = buildWeekItems()
+                )
+            ),
             onRefreshClick = {}
         )
     }
