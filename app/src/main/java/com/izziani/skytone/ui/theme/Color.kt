@@ -2,10 +2,16 @@ package com.izziani.skytone.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val DuskNavy = Color(0xFF0B1023)
+val DuskMidnight = Color(0xFF141A35)
+val DuskPurple = Color(0xFF1F1B3C)
+val TwilightIndigo = Color(0xFF2A2B56)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val SunsetAmber = Color(0xFFFFB86C)
+val SunsetCoral = Color(0xFFFF7B72)
+val SunsetRose = Color(0xFFFF9AA2)
+
+val MistWhite = Color(0xFFEDEBFF)
+val MistMuted = Color(0xFFBAB5D6)
+val GlassBorder = Color(0x40FFFFFF)
+val GlassSurface = Color(0x26FFFFFF)

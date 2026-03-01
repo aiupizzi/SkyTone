@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,11 +36,17 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.izziani.skytone.ui.theme.GlassBorder
+import com.izziani.skytone.ui.theme.GlassSurface
 import com.izziani.skytone.ui.theme.SkyToneTheme
+import com.izziani.skytone.ui.theme.SunsetCoral
+import com.izziani.skytone.ui.theme.TwilightIndigo
 import com.izziani.skytone.network.RetrofitInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Duration
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -261,8 +271,9 @@ fun WelcomeScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.background
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.surface
                         )
                     )
                 )
@@ -338,35 +349,131 @@ fun TopHeaderSection(currentTime: String, location: String, date: String) {
 
 @Composable
 fun SunsetHeroCard(sunsetInfo: String, onRefreshClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    val sunsetTime = remember(sunsetInfo) { extractSunsetEndTime(sunsetInfo) }
+    val countdownLabel = remember(sunsetTime) { calculateCountdownLabel(sunsetTime) }
+
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(230.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "Sunset & Twilight",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
+        Box(modifier = Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(id = R.drawable.sunset_background),
+                contentDescription = "Sunset background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
-            Text(
-                text = sunsetInfo,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                TwilightIndigo.copy(alpha = 0.5f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
             )
-            Button(onClick = onRefreshClick, modifier = Modifier.align(Alignment.End)) {
-                Text("Refresh Data")
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Sunset Time",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
+                )
+                Text(
+                    text = sunsetTime,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = countdownLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Button(
+                onClick = onRefreshClick,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SunsetCoral,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Text("Refresh")
             }
         }
     }
 }
 
 @Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = GlassSurface),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp,
+            hoveredElevation = 10.dp,
+            focusedElevation = 8.dp,
+            pressedElevation = 4.dp
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+    ) {
+        content()
+    }
+}
+
+private fun extractSunsetEndTime(sunsetInfo: String): String {
+    val sunsetLine = sunsetInfo
+        .lineSequence()
+        .firstOrNull { it.startsWith("Sunset Ends:", ignoreCase = true) }
+    return sunsetLine?.substringAfter(':')?.trim()?.takeIf { it.isNotBlank() } ?: "Unavailable"
+}
+
+private fun calculateCountdownLabel(sunsetTime: String): String {
+    if (sunsetTime == "Unavailable") return "Countdown unavailable"
+
+    return try {
+        val formatter = DateTimeFormatter.ofPattern("hh:mm a", Locale.getDefault())
+        val targetTime = LocalTime.parse(sunsetTime, formatter)
+        val now = LocalTime.now()
+        val minutes = Duration.between(now, targetTime).toMinutes()
+
+        when {
+            minutes > 0 -> {
+                val hoursPart = minutes / 60
+                val minutePart = minutes % 60
+                "Sunset in ${hoursPart}h ${minutePart}m"
+            }
+
+            minutes == 0L -> "Sunset is happening now"
+            else -> "Sunset has passed"
+        }
+    } catch (e: Exception) {
+        "Countdown unavailable"
+    }
+}
+
+@Composable
 fun TwilightSummaryRow(civil: String, nautical: String, astronomical: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -382,7 +489,7 @@ fun TwilightSummaryRow(civil: String, nautical: String, astronomical: String) {
 
 @Composable
 fun TodayDetailsRow(humidity: String, wind: String, cloudCover: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -408,7 +515,7 @@ data class ForecastItem(val day: String, val condition: String, val temperatureR
 
 @Composable
 fun WeekForecastSection(forecastItems: List<ForecastItem>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
