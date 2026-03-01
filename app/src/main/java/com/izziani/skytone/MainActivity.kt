@@ -11,15 +11,23 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Settings
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -79,14 +87,11 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SkyToneTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    WelcomeScreen(
-                        location = locationState.value,
-                        sunsetInfo = sunsetState.value,
-                        onRefreshClick = { fetchLocation() },
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                WelcomeScreen(
+                    location = locationState.value,
+                    sunsetInfo = sunsetState.value,
+                    onRefreshClick = { fetchLocation() }
+                )
             }
         }
     }
@@ -243,100 +248,217 @@ fun WelcomeScreen(
     onRefreshClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.background
+    val sectionHorizontalPadding = 16.dp
+    val sectionSpacing = 14.dp
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        bottomBar = { BottomNavigationBar() }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.background
+                        )
                     )
                 )
-            ),
-        contentAlignment = Alignment.Center
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = sectionHorizontalPadding,
+                    end = sectionHorizontalPadding,
+                    top = innerPadding.calculateTopPadding() + 16.dp,
+                    bottom = innerPadding.calculateBottomPadding() + 16.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(sectionSpacing)
+            ) {
+                item {
+                    TopHeaderSection(
+                        currentTime = "Now",
+                        location = location,
+                        date = "Today"
+                    )
+                }
+                item { SunsetHeroCard(sunsetInfo = sunsetInfo, onRefreshClick = onRefreshClick) }
+                item {
+                    TwilightSummaryRow(
+                        civil = "6:31 PM",
+                        nautical = "7:04 PM",
+                        astronomical = "7:36 PM"
+                    )
+                }
+                item {
+                    TodayDetailsRow(
+                        humidity = "62%",
+                        wind = "11 km/h",
+                        cloudCover = "18%"
+                    )
+                }
+                item {
+                    WeekForecastSection(
+                        forecastItems = listOf(
+                            ForecastItem("Mon", "Clear", "22° / 13°"),
+                            ForecastItem("Tue", "Sunny", "24° / 14°"),
+                            ForecastItem("Wed", "Partly Cloudy", "21° / 12°"),
+                            ForecastItem("Thu", "Cloudy", "20° / 11°"),
+                            ForecastItem("Fri", "Light Rain", "18° / 10°")
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TopHeaderSection(currentTime: String, location: String, date: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = currentTime,
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
+        Text(
+            text = location,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
+        Text(
+            text = date,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+        )
+    }
+}
+
+@Composable
+fun SunsetHeroCard(sunsetInfo: String, onRefreshClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
-            modifier = modifier
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "SkyTone",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
-                textAlign = TextAlign.Center
+                text = "Sunset & Twilight",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Your Location",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = location,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(8.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Sunset & Twilight",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = sunsetInfo,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onRefreshClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
+            Text(
+                text = sunsetInfo,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Button(onClick = onRefreshClick, modifier = Modifier.align(Alignment.End)) {
                 Text("Refresh Data")
             }
         }
     }
 }
+
+@Composable
+fun TwilightSummaryRow(civil: String, nautical: String, astronomical: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            SummaryItem(label = "Civil", value = civil)
+            SummaryItem(label = "Nautical", value = nautical)
+            SummaryItem(label = "Astronomical", value = astronomical)
+        }
+    }
+}
+
+@Composable
+fun TodayDetailsRow(humidity: String, wind: String, cloudCover: String) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            SummaryItem(label = "Humidity", value = humidity)
+            SummaryItem(label = "Wind", value = wind)
+            SummaryItem(label = "Clouds", value = cloudCover)
+        }
+    }
+}
+
+@Composable
+fun SummaryItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, style = MaterialTheme.typography.labelMedium)
+        Text(text = value, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+data class ForecastItem(val day: String, val condition: String, val temperatureRange: String)
+
+@Composable
+fun WeekForecastSection(forecastItems: List<ForecastItem>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text = "Week Forecast", style = MaterialTheme.typography.titleMedium)
+            forecastItems.forEach { item ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = item.day, style = MaterialTheme.typography.bodyLarge)
+                    Text(text = item.condition, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = item.temperatureRange, style = MaterialTheme.typography.titleSmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar() {
+    val tabs = listOf(
+        BottomTab("Home", Icons.Outlined.Home),
+        BottomTab("Locations", Icons.Outlined.LocationOn),
+        BottomTab("Alerts", Icons.Outlined.Notifications),
+        BottomTab("Settings", Icons.Outlined.Settings)
+    )
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    NavigationBar {
+        tabs.forEachIndexed { index, tab ->
+            NavigationBarItem(
+                selected = selectedTab == index,
+                onClick = { selectedTab = index },
+                icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
+                label = { Text(tab.label) }
+            )
+        }
+    }
+}
+
+data class BottomTab(val label: String, val icon: ImageVector)
 
 @Preview(showBackground = true)
 @Composable
