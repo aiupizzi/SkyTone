@@ -29,8 +29,10 @@ import com.izziani.skytone.network.RetrofitInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.*
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -141,19 +143,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun convertUtcToLocal(utcTime: String): String {
-        return try {
-            val utcFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'+00:00'", Locale.getDefault())
-            utcFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val date = utcFormat.parse(utcTime)
+    private fun convertUtcToLocal(utcTime: String): String =
+        formatUtcToLocalTime(utcTime)
+}
 
-            val localFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            localFormat.timeZone = TimeZone.getDefault()
+internal fun formatUtcToLocalTime(
+    utcTime: String,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault()
+): String {
+    return try {
+        val localDateTime = OffsetDateTime.parse(utcTime)
+            .atZoneSameInstant(zoneId)
 
-            date?.let { localFormat.format(it) } ?: "Invalid time"
-        } catch (e: Exception) {
-            "Error converting time"
-        }
+        val formatter = DateTimeFormatter.ofPattern("hh:mm a", locale)
+        localDateTime.format(formatter)
+    } catch (e: Exception) {
+        "Error converting time"
     }
 }
 
