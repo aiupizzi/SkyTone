@@ -2,95 +2,161 @@
 
 # SkyTone
 
-SkyTone is an Android app that shows sunset and twilight times based on your location using Jetpack Compose and API integration.
+SkyTone is an Android application that shows sunset and twilight information for your current location.  
+It is built with **Jetpack Compose**, uses **Google Play Services Location** to get coordinates, and calls the **Sunrise-Sunset API** to retrieve astronomical times.
 
-## Architecture
+---
 
-Built using Jetpack Compose with single-activity architecture. Implements location services for user position and RESTful API for sunset calculations.
+## Features
 
-```kotlin
-class MainActivity : ComponentActivity() {
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private var locationState = mutableStateOf<LocationState>()
-    private var sunsetState = mutableStateOf<SunsetState>()
-}
+- Current location detection (fine/coarse location permissions)
+- Sunset and civil twilight times based on your coordinates
+- UTC-to-local time conversion for user-friendly display
+- Simple, modern UI built with Material 3 and Jetpack Compose
+- Manual refresh action to request updated location and times
+
+---
+
+## Screens and Flow
+
+1. App starts and checks location permissions.
+2. If permission is granted, the app requests the device's last known location.
+3. Latitude/longitude are sent to the Sunrise-Sunset API.
+4. Returned UTC values are converted to local time.
+5. Location and sunset/twilight values are rendered in the Compose UI.
+
+---
+
+## Tech Stack
+
+### Platform
+- Android (minSdk 24, targetSdk 34)
+- Kotlin
+- Jetpack Compose (Material 3)
+
+### Libraries
+- `com.google.android.gms:play-services-location` for location retrieval
+- `com.squareup.retrofit2:retrofit` for HTTP client
+- `com.squareup.retrofit2:converter-gson` for JSON parsing
+- Kotlin coroutines for asynchronous work
+
+---
+
+## Project Structure
+
+```text
+app/
+  src/main/java/com/izziani/skytone/
+    MainActivity.kt                 # Activity + Compose screen + UI state
+    network/
+      RetrofitInstance.kt           # Retrofit configuration
+      SunriseSunsetApi.kt           # API interface and response models
+    ui/theme/
+      Color.kt                      # Compose color definitions
+      Theme.kt                      # Material theme setup
+      Type.kt                       # Typography setup
 ```
 
-## Technical Stack
+---
 
-### Core Components
-- Jetpack Compose UI (1.6.0)
-- Material Design 3
-- FusedLocationProviderClient
-- Retrofit2
-- Coroutines for async operations
+## Permissions
 
-### Build Specs
-- Target SDK: 34
-- Min SDK: 24
-- Kotlin: 1.9.0
-- JDK: 17
+Declared in `AndroidManifest.xml`:
 
-## Key Features
+- `android.permission.ACCESS_FINE_LOCATION`
+- `android.permission.ACCESS_COARSE_LOCATION`
+- `android.permission.INTERNET`
 
-### Location Services
-Implements Google Play Services location API for precise positioning. Handles runtime permissions with ActivityResultContracts.
+---
 
-### Time Processing
-Converts UTC timestamps to local time zones for sunset calculations:
-```kotlin
-data class SunsetData(
-    val twilightBegin: String,  // Civil twilight start
-    val sunset: String,         // Actual sunset
-    val twilightEnd: String     // Civil twilight end
-)
-```
+## API
 
-### Network Layer
-RESTful implementation using Retrofit for sunset time fetching. Processes astronomical data through the Sunrise-Sunset API.
+SkyTone integrates with:  
+**Sunrise-Sunset API** → `https://api.sunrise-sunset.org/json`
 
-## State Management
+Request parameters used:
 
-Implements Compose state management for:
-- Location updates
-- Sunset calculations
-- UI rendering
-- Permission handling
+- `lat`: latitude
+- `lng`: longitude
+- `formatted=0` to receive ISO-like UTC timestamps
+
+Example response fields consumed:
+
+- `results.sunset`
+- `results.civil_twilight_begin`
+- `results.civil_twilight_end`
+
+---
+
+## Build and Run
+
+### Prerequisites
+
+- Android Studio (latest stable recommended)
+- Android SDK 34
+- JDK 17
+
+### Steps
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/aiupizzi/skytone.git
+   cd skytone
+   ```
+
+2. Open the project in Android Studio.
+3. Sync Gradle dependencies.
+4. Run the app on an emulator or physical device.
+5. Grant location permission when prompted.
+
+---
 
 ## Testing
 
-Current automated coverage focuses on JVM unit tests and a basic instrumentation sanity check:
+Current repository includes starter test files:
 
-- `MainActivityTimeFormatTest` verifies UTC-to-local time formatting and error handling (`Unavailable` and invalid timestamp inputs).
-- `SunsetApiStatusMappingTest` verifies Sunrise-Sunset API status-to-message mapping used for user-facing error states.
-- `SkyToneAppContextInstrumentedTest` verifies the app launches under the expected application ID on device/emulator.
+- Unit test source: `app/src/test/...`
+- Instrumented test source: `app/src/androidTest/...`
 
-There are currently no Compose UI interaction tests in this repository.
+To run tests:
 
-## Permissions
-- Fine location
-- Coarse location
-- Internet access
-
-## Build Instructions
-1. Clone repository:
 ```bash
-git clone https://github.com/aiupizzi/skytone.git
+./gradlew test
+./gradlew connectedAndroidTest
 ```
-2. Open in Android Studio.
-3. Build and run.
+
+---
+
+## Troubleshooting
+
+- **Location is unavailable**: ensure location services are enabled on device and permission is granted.
+- **No network data**: verify internet access and API reachability.
+- **Times seem incorrect**: check device timezone settings.
+
+---
+
+## Roadmap Ideas
+
+- Better error and loading states
+- Weather context around sunset period
+- Saved favorite locations
+- Notifications before sunset/twilight transitions
+- Improved dashboard-style visual design
+
+---
 
 ## Contributing
 
-Fork, branch, commit, and submit a pull request.
+Contributions are welcome.
 
-## Future Development
+1. Fork the repo
+2. Create a feature branch
+3. Commit your changes
+4. Open a Pull Request
 
-- Push notifications system
-- Weather integration
-- Custom location support
-- Historical data tracking
+---
 
 ## License
 
-[MIT License](https://github.com/aiupizzi/SkyTone/blob/master/LICENSE.md)
+This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md).
