@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -29,7 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
 import androidx.core.content.ContextCompat
@@ -609,27 +610,49 @@ private fun buildWeekItems(): List<WeekItem> {
 
 @Composable
 fun BottomNavigationBar() {
-    val tabs = listOf(
-        BottomTab("Home", Icons.Outlined.Home),
-        BottomTab("Locations", Icons.Outlined.LocationOn),
-        BottomTab("Alerts", Icons.Outlined.Notifications),
-        BottomTab("Settings", Icons.Outlined.Settings)
-    )
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var navItems by remember {
+        mutableStateOf(
+            listOf(
+                NavItem(label = "Home", icon = Icons.Outlined.Home, selected = true),
+                NavItem(label = "Places", icon = Icons.Outlined.Place, selected = false),
+                NavItem(label = "Alerts", icon = Icons.Outlined.Notifications, selected = false),
+                NavItem(label = "Settings", icon = Icons.Outlined.Settings, selected = false)
+            )
+        )
+    }
 
-    NavigationBar {
-        tabs.forEachIndexed { index, tab ->
+    val selectedTint = MaterialTheme.colorScheme.primary
+    val unselectedTint = MaterialTheme.colorScheme.onSurfaceVariant
+
+    NavigationBar(
+        modifier = Modifier
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        navItems.forEachIndexed { index, item ->
             NavigationBarItem(
-                selected = selectedTab == index,
-                onClick = { selectedTab = index },
-                icon = { Icon(imageVector = tab.icon, contentDescription = tab.label) },
-                label = { Text(tab.label) }
+                selected = item.selected,
+                onClick = {
+                    navItems = navItems.mapIndexed { mappedIndex, mappedItem ->
+                        mappedItem.copy(selected = mappedIndex == index)
+                    }
+                    // TODO: Connect this click to Navigation Compose destinations.
+                },
+                icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
+                label = { Text(item.label) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = selectedTint,
+                    selectedTextColor = selectedTint,
+                    indicatorColor = selectedTint.copy(alpha = 0.15f),
+                    unselectedIconColor = unselectedTint,
+                    unselectedTextColor = unselectedTint
+                )
             )
         }
     }
 }
 
-data class BottomTab(val label: String, val icon: ImageVector)
+data class NavItem(val label: String, val icon: ImageVector, val selected: Boolean)
 
 @Preview(showBackground = true)
 @Composable
