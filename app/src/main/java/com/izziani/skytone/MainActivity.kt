@@ -21,13 +21,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.izziani.skytone.ui.theme.SkyToneTheme
 import com.izziani.skytone.network.RetrofitInstance
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -117,20 +118,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun fetchSunsetData(latitude: Double, longitude: Double) {
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch {
             try {
-                val response = RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude)
-                val results = response.results
+                val sunsetInfo = withContext(Dispatchers.IO) {
+                    val response = RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude)
+                    val results = response.results
 
-                val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
-                val sunsetEndLocal = convertUtcToLocal(results.sunset)
-                val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
+                    val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
+                    val sunsetEndLocal = convertUtcToLocal(results.sunset)
+                    val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
 
-                sunsetState.value = """
-                    Sunset Starts: $sunsetStartLocal
-                    Sunset Ends: $sunsetEndLocal
-                    Twilight Ends: $twilightEndLocal
-                """.trimIndent()
+                    """
+                        Sunset Starts: $sunsetStartLocal
+                        Sunset Ends: $sunsetEndLocal
+                        Twilight Ends: $twilightEndLocal
+                    """.trimIndent()
+                }
+
+                sunsetState.value = sunsetInfo
             } catch (e: Exception) {
                 sunsetState.value = "Failed to fetch sunset data: ${e.message}"
             }
