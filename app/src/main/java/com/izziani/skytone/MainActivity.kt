@@ -34,6 +34,20 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private const val SERVICE_UNAVAILABLE_STATUS = "UNKNOWN_ERROR"
+
+private sealed interface SunsetFetchResult {
+    data class Success(
+        val sunsetStartLocal: String,
+        val sunsetEndLocal: String,
+        val twilightEndLocal: String
+    ) : SunsetFetchResult
+
+    data class DomainError(val message: String) : SunsetFetchResult
+
+    data class NetworkError(val message: String) : SunsetFetchResult
+}
+
 class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var locationState = mutableStateOf("Fetching location...")
@@ -123,28 +137,79 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             sunsetState.value = "Fetching sunset data..."
 
-            try {
-                val results = withContext(Dispatchers.IO) {
-                    RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude).results
+            when (val result = fetchAndMapSunsetData(latitude, longitude)) {
+                is SunsetFetchResult.Success -> {
+                    sunsetState.value = """
+                        Sunset Starts: ${result.sunsetStartLocal}
+                        Sunset Ends: ${result.sunsetEndLocal}
+                        Twilight Ends: ${result.twilightEndLocal}
+                    """.trimIndent()
                 }
 
-                val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
-                val sunsetEndLocal = convertUtcToLocal(results.sunset)
-                val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
+                is SunsetFetchResult.DomainError -> {
+                    sunsetState.value = result.message
+                }
 
-                sunsetState.value = """
-                    Sunset Starts: $sunsetStartLocal
-                    Sunset Ends: $sunsetEndLocal
-                    Twilight Ends: $twilightEndLocal
-                """.trimIndent()
-            } catch (e: Exception) {
-                sunsetState.value = "Failed to fetch sunset data: ${e.message}"
+                is SunsetFetchResult.NetworkError -> {
+                    sunsetState.value = result.message
+                }
             }
         }
     }
 
-    private fun convertUtcToLocal(utcTime: String): String =
-        formatUtcToLocalTime(utcTime)
+    private suspend fun fetchAndMapSunsetData(
+        latitude: Double,
+        longitude: Double
+    ): SunsetFetchResult {
+        return try {
+            val response = withContext(Dispatchers.IO) {
+                RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude)
+            }
+
+            if (response.status != "OK") {
+                return SunsetFetchResult.DomainError(mapStatusToMessage(response.status))
+            }
+
+            val results = response.results
+                ?: return SunsetFetchResult.DomainError(
+                    "Sunset information is temporarily unavailable. Please try again shortly."
+                )
+
+            val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
+            val sunsetEndLocal = convertUtcToLocal(results.sunset)
+            val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
+
+            SunsetFetchResult.Success(
+                sunsetStartLocal = sunsetStartLocal,
+                sunsetEndLocal = sunsetEndLocal,
+                twilightEndLocal = twilightEndLocal
+            )
+        } catch (e: Exception) {
+            SunsetFetchResult.NetworkError(
+                "Failed to fetch sunset data. Check your connection and try again."
+            )
+        }
+    }
+
+    private fun mapStatusToMessage(status: String): String {
+        return when (status.uppercase(Locale.US)) {
+            "INVALID_REQUEST" -> "Invalid location request. Please refresh and try again."
+            "INVALID_DATE" -> "The requested date is invalid. Please try again later."
+            SERVICE_UNAVAILABLE_STATUS ->
+                "Sunset service is temporarily unavailable. Please try again later."
+
+            else -> "Unable to retrieve sunset data at the moment. Please try again later."
+        }
+    }
+
+    private fun convertUtcToLocal(utcTime: String?): String {
+        val time = utcTime?.trim()
+        if (time.isNullOrEmpty()) {
+            return "Unavailable"
+        }
+
+        return formatUtcToLocalTime(time)
+    }
 }
 
 internal fun formatUtcToLocalTime(
