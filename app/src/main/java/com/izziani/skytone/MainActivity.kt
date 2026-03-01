@@ -119,23 +119,22 @@ class MainActivity : ComponentActivity() {
 
     private fun fetchSunsetData(latitude: Double, longitude: Double) {
         lifecycleScope.launch {
+            sunsetState.value = "Fetching sunset data..."
+
             try {
-                val sunsetInfo = withContext(Dispatchers.IO) {
-                    val response = RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude)
-                    val results = response.results
-
-                    val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
-                    val sunsetEndLocal = convertUtcToLocal(results.sunset)
-                    val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
-
-                    """
-                        Sunset Starts: $sunsetStartLocal
-                        Sunset Ends: $sunsetEndLocal
-                        Twilight Ends: $twilightEndLocal
-                    """.trimIndent()
+                val results = withContext(Dispatchers.IO) {
+                    RetrofitInstance.api.getSunriseSunsetTimes(latitude, longitude).results
                 }
 
-                sunsetState.value = sunsetInfo
+                val sunsetStartLocal = convertUtcToLocal(results.civil_twilight_begin)
+                val sunsetEndLocal = convertUtcToLocal(results.sunset)
+                val twilightEndLocal = convertUtcToLocal(results.civil_twilight_end)
+
+                sunsetState.value = """
+                    Sunset Starts: $sunsetStartLocal
+                    Sunset Ends: $sunsetEndLocal
+                    Twilight Ends: $twilightEndLocal
+                """.trimIndent()
             } catch (e: Exception) {
                 sunsetState.value = "Failed to fetch sunset data: ${e.message}"
             }
