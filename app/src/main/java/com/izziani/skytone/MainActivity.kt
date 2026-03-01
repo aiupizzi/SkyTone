@@ -55,6 +55,20 @@ import java.util.Locale
 
 private const val SERVICE_UNAVAILABLE_STATUS = "UNKNOWN_ERROR"
 
+private object AppSpacing {
+    val xSmall = 4.dp
+    val small = 8.dp
+    val medium = 12.dp
+    val large = 16.dp
+    val xLarge = 24.dp
+}
+
+private object AppCorners {
+    val hero = 24.dp
+    val pill = 16.dp
+    val miniCard = 12.dp
+}
+
 data class SunsetUiModel(
     val sunsetTime: String,
     val countdownLabel: String,
@@ -285,9 +299,6 @@ fun WelcomeScreen(
     onRefreshClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sectionHorizontalPadding = 16.dp
-    val sectionSpacing = 14.dp
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = { BottomNavigationBar() }
@@ -308,12 +319,12 @@ fun WelcomeScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = sectionHorizontalPadding,
-                    end = sectionHorizontalPadding,
-                    top = innerPadding.calculateTopPadding() + 16.dp,
-                    bottom = innerPadding.calculateBottomPadding() + 16.dp
+                    start = AppSpacing.large,
+                    end = AppSpacing.large,
+                    top = innerPadding.calculateTopPadding() + AppSpacing.large,
+                    bottom = innerPadding.calculateBottomPadding() + AppSpacing.large
                 ),
-                verticalArrangement = Arrangement.spacedBy(sectionSpacing)
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.large)
             ) {
                 item {
                     TopHeaderSection(
@@ -346,21 +357,21 @@ fun WelcomeScreen(
 
 @Composable
 fun TopHeaderSection(currentTime: String, location: String, date: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xSmall)) {
         Text(
             text = currentTime,
             style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.onPrimary
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = location,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimary
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
         )
         Text(
             text = date,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -377,7 +388,8 @@ fun SunsetHeroCard(sunsetState: SunsetUiState, onRefreshClick: () -> Unit) {
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .height(230.dp)
+            .height(230.dp),
+        cornerRadius = AppCorners.hero
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -404,24 +416,24 @@ fun SunsetHeroCard(sunsetState: SunsetUiState, onRefreshClick: () -> Unit) {
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(horizontal = 20.dp),
+                    .padding(horizontal = AppSpacing.xLarge),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.small)
             ) {
                 Text(
                     text = "Sunset Time",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = sunsetTime,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = countdownLabel,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -429,7 +441,7 @@ fun SunsetHeroCard(sunsetState: SunsetUiState, onRefreshClick: () -> Unit) {
                 onClick = onRefreshClick,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
+                    .padding(AppSpacing.large),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = SunsetCoral,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -444,11 +456,12 @@ fun SunsetHeroCard(sunsetState: SunsetUiState, onRefreshClick: () -> Unit) {
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
+    cornerRadius: androidx.compose.ui.unit.Dp = AppCorners.hero,
     content: @Composable () -> Unit
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(cornerRadius),
         colors = CardDefaults.cardColors(containerColor = GlassSurface),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 6.dp,
@@ -485,14 +498,25 @@ private fun calculateCountdownLabel(sunsetTime: String): String {
 @Composable
 fun TwilightSummaryRow(items: List<TwilightItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(AppSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
-            items.forEach { item ->
-                TwilightStatCard(item = item)
+            Text(
+                text = "Twilight Summary",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+            ) {
+                items.forEach { item ->
+                    TwilightStatCard(
+                        item = item,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -501,32 +525,78 @@ fun TwilightSummaryRow(items: List<TwilightItem>) {
 @Composable
 fun TodayDetailsRow(items: List<TodayDetailItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(AppSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
-            items.forEach { item ->
-                DetailPill(item = item)
+            Text(
+                text = "Today Details",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)
+            ) {
+                items.forEach { item ->
+                    DetailPill(
+                        item = item,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun TwilightStatCard(item: TwilightItem) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = item.label, style = MaterialTheme.typography.labelMedium)
-        Text(text = item.value, style = MaterialTheme.typography.titleSmall)
+fun TwilightStatCard(item: TwilightItem, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(AppCorners.miniCard))
+            .padding(horizontal = AppSpacing.small, vertical = AppSpacing.xSmall),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.xSmall)
+    ) {
+        Text(
+            text = item.label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = item.value,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
 @Composable
-fun DetailPill(item: TodayDetailItem) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = item.label, style = MaterialTheme.typography.labelMedium)
-        Text(text = item.value, style = MaterialTheme.typography.titleSmall)
+fun DetailPill(item: TodayDetailItem, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(AppCorners.pill),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    ) {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = AppSpacing.medium,
+                vertical = AppSpacing.small
+            ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.xSmall)
+        ) {
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = item.value,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
@@ -534,10 +604,14 @@ fun DetailPill(item: TodayDetailItem) {
 fun WeekForecastSection(weekItems: List<WeekItem>) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(AppSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.medium)
         ) {
-            Text(text = "Week Forecast", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "Week Forecast",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
             weekItems.forEach { item ->
                 WeekDayCard(item = item)
             }
@@ -553,14 +627,18 @@ fun WeekDayCard(item: WeekItem) {
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant,
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(AppCorners.miniCard)
             )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = AppSpacing.medium, vertical = AppSpacing.small),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = item.day, style = MaterialTheme.typography.bodyLarge)
-        Text(text = item.condition, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = item.condition,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(text = item.temperatureRange, style = MaterialTheme.typography.titleSmall)
     }
 }
@@ -570,7 +648,7 @@ fun SunsetLoadingBlock() {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "Loading sunset details...",
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(AppSpacing.large)
         )
     }
 }
@@ -580,7 +658,7 @@ fun SunsetErrorBlock(message: String) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = message,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(AppSpacing.large),
             color = MaterialTheme.colorScheme.error
         )
     }
@@ -626,7 +704,7 @@ fun BottomNavigationBar() {
 
     NavigationBar(
         modifier = Modifier
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+            .clip(RoundedCornerShape(topStart = AppCorners.hero, topEnd = AppCorners.hero)),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         navItems.forEachIndexed { index, item ->
@@ -655,6 +733,7 @@ fun BottomNavigationBar() {
 data class NavItem(val label: String, val icon: ImageVector, val selected: Boolean)
 
 @Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 320, name = "Narrow width")
 @Composable
 fun WelcomeScreenPreview() {
     SkyToneTheme {
