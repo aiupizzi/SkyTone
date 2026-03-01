@@ -191,24 +191,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun mapStatusToMessage(status: String): String {
-        return when (status.uppercase(Locale.US)) {
-            "INVALID_REQUEST" -> "Invalid location request. Please refresh and try again."
-            "INVALID_DATE" -> "The requested date is invalid. Please try again later."
-            SERVICE_UNAVAILABLE_STATUS ->
-                "Sunset service is temporarily unavailable. Please try again later."
+    private fun mapStatusToMessage(status: String): String = mapSunsetStatusToMessage(status)
 
-            else -> "Unable to retrieve sunset data at the moment. Please try again later."
-        }
+    private fun convertUtcToLocal(utcTime: String?): String = convertUtcToLocalOrUnavailable(utcTime)
+}
+
+internal fun convertUtcToLocalOrUnavailable(
+    utcTime: String?,
+    zoneId: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault()
+): String {
+    val time = utcTime?.trim()
+    if (time.isNullOrEmpty()) {
+        return "Unavailable"
     }
 
-    private fun convertUtcToLocal(utcTime: String?): String {
-        val time = utcTime?.trim()
-        if (time.isNullOrEmpty()) {
-            return "Unavailable"
-        }
+    return formatUtcToLocalTime(time, zoneId, locale)
+}
 
-        return formatUtcToLocalTime(time)
+internal fun mapSunsetStatusToMessage(status: String): String {
+    return when (status.uppercase(Locale.US)) {
+        "INVALID_REQUEST" -> "Invalid location request. Please refresh and try again."
+        "INVALID_DATE" -> "The requested date is invalid. Please try again later."
+        SERVICE_UNAVAILABLE_STATUS ->
+            "Sunset service is temporarily unavailable. Please try again later."
+
+        else -> "Unable to retrieve sunset data at the moment. Please try again later."
     }
 }
 
